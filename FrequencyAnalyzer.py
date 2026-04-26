@@ -24,6 +24,16 @@ def analyze_frequency(text, n_gram):
     
     return sorted_freq
 
+def analyze_trigrams_ignore_extra(text):
+    """Analyze non-overlapping trigrams and ignore trailing 1-2 extra chars."""
+    usable_length = len(text) - (len(text) % 3)
+    trigrams = [text[i:i+3] for i in range(0, usable_length, 3)]
+
+    freq_counter = Counter(trigrams)
+    sorted_freq = sorted(freq_counter.items(), key=lambda x: (-x[1], x[0]))
+
+    return sorted_freq
+
 def display_frequency(sorted_freq, n_gram):
     """Display frequency analysis results"""
     gram_type = "CHARACTER" if n_gram == 1 else f"{n_gram}-GRAM"
@@ -73,9 +83,10 @@ def main():
         print("1. Single Character Frequency")
         print("2. Digraph (2-Character) Frequency")
         print("3. Both Analyses")
-        print("4. Back to Menu")
+        print("4. Trigram (3-Character) Frequency")
+        print("5. Exit")
         
-        choice = input("\nSelect option (1-4): ").strip()
+        choice = input("\nSelect option (1-5): ").strip()
         
         if choice == "1":
             freq = analyze_frequency(text, 1)
@@ -97,10 +108,15 @@ def main():
             display_top_n(freq_2, 2, 10)
             
         elif choice == "4":
+            freq_3 = analyze_trigrams_ignore_extra(text)
+            display_frequency(freq_3, 3)
+            display_top_n(freq_3, 3, 10)
+
+        elif choice == "5":
             break
             
         else:
-            print("Invalid choice! Please select 1-4.")
+            print("Invalid choice! Please select 1-5.")
         
         cont = input("\nContinue? (y/n): ").strip().lower()
         if cont != 'y':
