@@ -26,6 +26,7 @@ def analyze_frequency(text, n_gram):
 
 def analyze_trigrams_ignore_extra(text):
     """Analyze overlapping trigrams and ignore trailing incomplete chars."""
+    trigrams = [text[i:i+3] for i in range(len(text) - 2)]
 
     freq_counter = Counter(trigrams)
     sorted_freq = sorted(freq_counter.items(), key=lambda x: (-x[1], x[0]))
