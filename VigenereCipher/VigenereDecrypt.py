@@ -4,15 +4,12 @@ import matplotlib.pyplot as plt
 
 ALPHABET = string.ascii_uppercase
 
-# ---------------------------
-# CLEAN TEXT
-# ---------------------------
+
+# Clean the text: keep only A-Z and make everything uppercase
 def clean_text(text):
     return ''.join([c for c in text.upper() if c in ALPHABET])
 
-# ---------------------------
-# KASISKI EXAMINATION
-# ---------------------------
+# Find repeated sequences and calculate distances between them
 def find_repeated_sequences_spacings(text, seq_len=3):
     spacing = defaultdict(list)
 
@@ -22,6 +19,7 @@ def find_repeated_sequences_spacings(text, seq_len=3):
 
     distances = []
 
+    # If a sequence appears more than once, calculate the gaps
     for positions in spacing.values():
         if len(positions) > 1:
             for i in range(len(positions)-1):
@@ -29,9 +27,13 @@ def find_repeated_sequences_spacings(text, seq_len=3):
 
     return distances
 
+
+# Get possible factors (possible key lengths)
 def get_factors(n):
     return set(i for i in range(2, 30) if n % i == 0)
 
+
+# Use Kasiski to guess likely key lengths
 def kasiski_key_lengths(text):
     distances = find_repeated_sequences_spacings(text)
     factor_counts = Counter()
@@ -40,11 +42,11 @@ def kasiski_key_lengths(text):
         for f in get_factors(d):
             factor_counts[f] += 1
 
+    # Return most common factors
     return [k for k, _ in factor_counts.most_common(10)]
 
-# ---------------------------
-# INDEX OF COINCIDENCE
-# ---------------------------
+
+# Calculate IC (to check how close text is to English)
 def index_of_coincidence(text):
     N = len(text)
     freq = Counter(text)
@@ -54,16 +56,19 @@ def index_of_coincidence(text):
 
     return sum(f * (f - 1) for f in freq.values()) / (N * (N - 1))
 
+
+# Split text into columns based on key length
 def split_columns(text, key_len):
     return [text[i::key_len] for i in range(key_len)]
 
+
+# Calculate average IC for all columns
 def avg_ic(text, key_len):
     cols = split_columns(text, key_len)
     return sum(index_of_coincidence(c) for c in cols) / key_len
 
-# ---------------------------
-# ENGLISH FREQUENCIES
-# ---------------------------
+
+# Standard English letter frequencies
 EN_FREQ = {
     'E':12.7,'T':9.1,'A':8.2,'O':7.5,'I':7.0,'N':6.7,'S':6.3,'H':6.1,
     'R':6.0,'D':4.3,'L':4.0,'C':2.8,'U':2.8,'M':2.4,'W':2.4,'F':2.2,
@@ -71,6 +76,8 @@ EN_FREQ = {
     'Q':0.1,'Z':0.07
 }
 
+
+# Calculate Chi-Square (how close text is to English)
 def chi_squared(column):
     N = len(column)
     freq = Counter(column)
@@ -83,9 +90,7 @@ def chi_squared(column):
 
     return chi
 
-# ---------------------------
-# BEST SHIFT
-# ---------------------------
+# Try all shifts and pick the best one using Chi-Square
 def best_shift(column):
     best = float('inf')
     best_s = 0
@@ -104,9 +109,8 @@ def best_shift(column):
 
     return best_s
 
-# ---------------------------
-# DECRYPT
-# ---------------------------
+
+# Decrypt full text using Vigenère key
 def decrypt(text, key):
     out = ""
     for i, c in enumerate(text):
@@ -114,16 +118,13 @@ def decrypt(text, key):
         out += ALPHABET[(ALPHABET.index(c) - shift) % 26]
     return out
 
-# ---------------------------
-# SCORING
-# ---------------------------
+# Check common English pairs (bigrams)
 def score_text(text):
     bigrams = ["TH","HE","IN","ER","AN","RE","ON","AT","EN","ND"]
     return sum(text.count(bg) * 5 for bg in bigrams)
 
-# ---------------------------
-# PLOT (FINAL ONLY)
-# ---------------------------
+
+# Compare column frequency with English frequency
 def plot_column_freq(column, key, key_len, col_index):
     freq = Counter(column)
     total = len(column)
@@ -147,10 +148,11 @@ def plot_column_freq(column, key, key_len, col_index):
 
     plt.show()
 
-# ---------------------------
-# MAIN
-# ---------------------------
+
+# Take input from user
 cipher_input = input("Paste cipher text: ").strip()
+
+# Clean the input
 cipher = clean_text(cipher_input)
 
 if not cipher:
@@ -158,11 +160,14 @@ if not cipher:
 
 print("\n🔍 Running analysis...\n")
 
+# Get key length candidates using Kasiski
 kasiski = kasiski_key_lengths(cipher)
 
+# Get best IC values
 ic_scores = {k: avg_ic(cipher, k) for k in range(2, 15)}
 top_ic = sorted(ic_scores, key=ic_scores.get, reverse=True)[:5]
 
+# Combine both methods
 candidates = list(set(kasiski + top_ic))
 
 best = ("", "", -1, 0)
@@ -173,14 +178,19 @@ for key_len in candidates:
     cols = split_columns(cipher, key_len)
     key = ""
 
+    # Find shift for each column
     for col in cols:
         key += ALPHABET[best_shift(col)]
 
+    # Decrypt text
     plaintext = decrypt(cipher, key)
+
+    # Score result
     score = score_text(plaintext)
 
     print(f"Key Length {key_len} → KEY: {key} | Score: {score}")
 
+    # Save best result
     if score > best[2]:
         best = (key, plaintext, score, key_len)
 
@@ -195,7 +205,7 @@ print(best_text[:1000])
 print("\n==============================")
 
 # -------- PLOT ONLY BEST --------
-print("\n  Generating frequency graphs for BEST key...\n")
+print("\nGenerating frequency graphs for BEST key...\n")
 
 best_columns = split_columns(cipher, best_len)
 
